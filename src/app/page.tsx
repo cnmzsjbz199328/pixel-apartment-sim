@@ -1,103 +1,158 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+
+// 组件
+import CharacterList from '../components/characterList/characterList';
+import CharacterDetails from '../components/characterList/CharacterDetails';
+import CommandLine from '../components/commandLine/commandLine';
+
+// 模拟数据
+import initialCharacters from '../mock/characters';
+
+// 类型定义
+interface Character {
+  id: number;
+  name: string;
+  age: number;
+  gender: string;
+  personality: string;
+  skills: string[];
+  relationships: Record<string, string>;
+  shortTermMemory: string[];
+  longTermMemory: string[];
+  currentRoom: string;
+  color: string;
+}
+
+// 使用类型断言解决dynamic导入问题
+const Game = dynamic(() => import('../components/Game'), { ssr: false }) as any;
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [characters] = useState<Character[]>(initialCharacters);
+  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [commandHistory, setCommandHistory] = useState<string[]>([
+    '系统初始化中...',
+    '加载公寓数据...',
+    '生成5位居民...',
+    '欢迎来到像素公寓生活模拟器!',
+    '输入"help"获取命令列表'
+  ]);
+  
+  // 处理游戏事件
+  const handleGameEvent = (type: string, data: any) => {
+    switch (type) {
+      case 'loading-progress':
+        console.log(`加载进度: ${data}%`);
+        break;
+      case 'loading-complete':
+        addCommandOutput('游戏资源加载完成!');
+        break;
+      case 'command-output':
+        addCommandOutput(data);
+        break;
+      case 'command-response':
+        addCommandOutput(data);
+        break;
+      default:
+        console.log('未处理的游戏事件:', type, data);
+    }
+  };
+  
+  // 添加命令输出
+  const addCommandOutput = (text: string) => {
+    setCommandHistory(prev => [...prev, text]);
+  };
+  
+  // 处理命令输入
+  const handleCommand = (command: string) => {
+    addCommandOutput(command);
+    
+    // 处理命令
+    processCommand(command);
+  };
+  
+  // 处理角色选择
+  const handleCharacterSelect = (id: number) => {
+    const character = characters.find(c => c.id === id);
+    if (character) {
+      setSelectedCharacter(character);
+      addCommandOutput(`查看人物: ${character.name}的详细信息`);
+    }
+  };
+  
+  // 处理命令逻辑
+  const processCommand = (command: string) => {
+    // 基本命令处理
+    if (command.toLowerCase() === 'help') {
+      addCommandOutput('可用命令:');
+      addCommandOutput('help - 显示帮助信息');
+      addCommandOutput('list - 列出所有居民');
+      addCommandOutput('view [名字] - 查看居民详情');
+      addCommandOutput('clear - 清除命令行输出');
+    } 
+    else if (command.toLowerCase() === 'list') {
+      addCommandOutput('公寓居民列表:');
+      characters.forEach(char => {
+        addCommandOutput(`${char.name} (${char.age}岁, ${char.gender}, 在${char.currentRoom})`);
+      });
+    }
+    else if (command.toLowerCase() === 'clear') {
+      setCommandHistory([]);
+    }
+    else if (command.startsWith('view ')) {
+      const name = command.substring(5).trim();
+      const character = characters.find(c => c.name === name);
+      if (character) {
+        setSelectedCharacter(character);
+        addCommandOutput(`查看人物: ${character.name}的详细信息`);
+      } else {
+        addCommandOutput(`错误: 找不到名为"${name}"的居民`);
+      }
+    }
+    else {
+      // 将未处理的命令发送到游戏引擎
+      const gameWindow = window as any;
+      if (gameWindow.game && gameWindow.game.scene.scenes[1]) {
+        gameWindow.game.scene.scenes[1].processCommand(command);
+      } else {
+        addCommandOutput(`错误: 未知命令"${command}"，输入"help"获取帮助`);
+      }
+    }
+  };
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  return (
+    <div className="bg-gray-900 text-white min-h-screen">
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl md:text-3xl mb-6 text-center text-green-400">像素公寓生活模拟器</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-1 space-y-4">
+            {/* 地图区域 - Phaser游戏 */}
+            <Game onGameEvent={handleGameEvent} />
+            
+            {/* 角色列表 */}
+            <CharacterList 
+              characters={characters} 
+              onCharacterSelect={handleCharacterSelect}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+          
+          <div className="lg:col-span-1">
+            {/* 命令行界面 */}
+            <CommandLine 
+              history={commandHistory} 
+              onSubmit={handleCommand} 
+            />
+          </div>
+
+          <div className="lg:col-span-1">
+            {/* 角色详情 */}
+            <CharacterDetails character={selectedCharacter} />
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
