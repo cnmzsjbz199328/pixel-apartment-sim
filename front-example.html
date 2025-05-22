@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素公寓生活模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 像素风格字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a2e;
+            color: #e6e6e6;
+            image-rendering: pixelated;
+        }
+        
+        .pixel-border {
+            border: 4px solid #4a4a4a;
+            box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
+        }
+        
+        .pixel-button {
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .pixel-button:hover {
+            background-color: #6a6a6a;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+        }
+        
+        .pixel-button:active {
+            transform: translate(0, 0);
+            box-shadow: none;
+        }
+        
+        .pixel-input {
+            background-color: #2a2a3a;
+            border: 3px solid #4a4a4a;
+            color: white;
+            padding: 8px;
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        .pixel-input:focus {
+            outline: none;
+            border-color: #6a6a6a;
+        }
+        
+        .character-card {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .character-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .pixel-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .pixel-scrollbar::-webkit-scrollbar-track {
+            background: #2a2a3a;
+        }
+        
+        .pixel-scrollbar::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+        }
+        
+        .pixel-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6a6a6a;
+        }
+        
+        /* 像素风格地图 */
+        .pixel-map {
+            background-color: #2a2a3a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .room {
+            position: absolute;
+            background-color: #3a3a4a;
+            border: 2px solid #4a4a4a;
+        }
+        
+        .wall {
+            position: absolute;
+            background-color: #5a5a6a;
+        }
+        
+        .door {
+            position: absolute;
+            background-color: #8b4513;
+        }
+        
+        .window {
+            position: absolute;
+            background-color: #add8e6;
+        }
+        
+        .furniture {
+            position: absolute;
+            background-color: #6a4a3a;
+        }
+        
+        .appliance {
+            position: absolute;
+            background-color: #7a7a8a;
+        }
+        
+        .plant {
+            position: absolute;
+            background-color: #2e8b57;
+        }
+        
+        .yard {
+            position: absolute;
+            background-color: #556b2f;
+        }
+        
+        .path {
+            position: absolute;
+            background-color: #8b4513;
+        }
+        
+        .character-icon {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+        
+        .character-icon:hover {
+            transform: scale(1.5);
+            z-index: 20;
+        }
+        
+        /* 命令行样式 */
+        .command-line {
+            background-color: #1a1a2e;
+            border-left: 4px solid #4a4a4a;
+        }
+        
+        .command-prompt {
+            color: #4CAF50;
+        }
+        
+        .command-text {
+            color: #e6e6e6;
+            line-height: 1.5;
+        }
+        
+        .command-input {
+            background-color: transparent;
+            border: none;
+            color: white;
+            width: 80%;
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        .command-input:focus {
+            outline: none;
+        }
+        
+        /* 人物详情下拉框 */
+        .character-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        
+        .character-details.open {
+            max-height: 500px;
+        }
+        
+        /* 像素风格动画 */
+        @keyframes pixel-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .cursor-blink {
+            animation: pixel-blink 1s infinite;
+        }
+        
+        /* 地图网格 */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(#3a3a4a 1px, transparent 1px),
+                linear-gradient(90deg, #3a3a4a 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto">
+        <h1 class="text-2xl md:text-3xl mb-6 text-center text-green-400">像素公寓生活模拟器</h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- 左侧区域：地图和人物列表 -->
+            <div class="lg:col-span-1 space-y-4">
+                <!-- 地图区域 -->
+                <div class="pixel-border p-4 bg-gray-900">
+                    <h2 class="text-lg mb-2 text-center">公寓地图</h2>
+                    <div class="pixel-map w-full h-64 relative" id="apartmentMap">
+                        <!-- 网格背景 -->
+                        <div class="grid-overlay"></div>
+                        
+                        <!-- 庭院 -->
+                        <div class="yard" style="top: 10px; left: 10px; width: 100px; height: 60px;"></div>
+                        <div class="path" style="top: 70px; left: 60px; width: 10px; height: 20px;"></div>
+                        <div class="plant" style="top: 20px; left: 20px; width: 10px; height: 10px;"></div>
+                        <div class="plant" style="top: 20px; left: 80px; width: 10px; height: 10px;"></div>
+                        
+                        <!-- 外墙 -->
+                        <div class="wall" style="top: 80px; left: 10px; width: 140px; height: 10px;"></div> <!-- 下墙 -->
+                        <div class="wall" style="top: 10px; left: 10px; width: 10px; height: 70px;"></div> <!-- 左墙 -->
+                        <div class="wall" style="top: 10px; left: 140px; width: 10px; height: 70px;"></div> <!-- 右墙 -->
+                        
+                        <!-- 大门 -->
+                        <div class="door" style="top: 70px; left: 60px; width: 20px; height: 10px;"></div>
+                        
+                        <!-- 玄关 -->
+                        <div class="room" style="top: 80px; left: 60px; width: 40px; height: 40px;" title="玄关">
+                            <div class="furniture" style="top: 10px; left: 10px; width: 20px; height: 5px;" title="鞋柜"></div>
+                        </div>
+                        
+                        <!-- 客厅 -->
+                        <div class="room" style="top: 30px; left: 20px; width: 60px; height: 50px;" title="客厅">
+                            <div class="window" style="top: 5px; left: 20px; width: 20px; height: 5px;"></div>
+                            <div class="furniture" style="top: 20px; left: 10px; width: 20px; height: 15px;" title="沙发"></div>
+                            <div class="furniture" style="top: 20px; left: 35px; width: 15px; height: 5px;" title="茶几"></div>
+                            <div class="appliance" style="top: 5px; left: 45px; width: 10px; height: 10px;" title="电视"></div>
+                            <div class="character-icon bg-red-500" style="top: 25px; left: 15px;" data-character="1" title="李明"></div>
+                        </div>
+                        
+                        <!-- 厨房 -->
+                        <div class="room" style="top: 30px; left: 80px; width: 60px; height: 30px;" title="厨房">
+                            <div class="window" style="top: 5px; left: 20px; width: 20px; height: 5px;"></div>
+                            <div class="appliance" style="top: 15px; left: 10px; width: 15px; height: 10px;" title="冰箱"></div>
+                            <div class="appliance" style="top: 15px; left: 35px; width: 15px; height: 5px;" title="炉灶"></div>
+                            <div class="character-icon bg-blue-500" style="top: 20px; left: 30px;" data-character="2" title="张伟"></div>
+                        </div>
+                        
+                        <!-- 餐厅 -->
+                        <div class="room" style="top: 60px; left: 80px; width: 30px; height: 30px;" title="餐厅">
+                            <div class="furniture" style="top: 10px; left: 5px; width: 20px; height: 10px;" title="餐桌"></div>
+                        </div>
+                        
+                        <!-- 走廊 -->
+                        <div class="room" style="top: 90px; left: 100px; width: 10px; height: 30px;" title="走廊"></div>
+                        
+                        <!-- 卧室1 -->
+                        <div class="room" style="top: 90px; left: 20px; width: 40px; height: 40px;" title="卧室1">
+                            <div class="window" style="top: 5px; left: 10px; width: 20px; height: 5px;"></div>
+                            <div class="furniture" style="top: 20px; left: 5px; width: 15px; height: 15px;" title="床"></div>
+                            <div class="furniture" style="top: 25px; left: 25px; width: 10px; height: 5px;" title="床头柜"></div>
+                            <div class="character-icon bg-green-500" style="top: 25px; left: 10px;" data-character="3" title="王芳"></div>
+                        </div>
+                        
+                        <!-- 卧室2 -->
+                        <div class="room" style="top: 90px; left: 60px; width: 40px; height: 40px;" title="卧室2">
+                            <div class="window" style="top: 5px; left: 10px; width: 20px; height: 5px;"></div>
+                            <div class="furniture" style="top: 20px; left: 5px; width: 15px; height: 15px;" title="床"></div>
+                            <div class="furniture" style="top: 25px; left: 25px; width: 10px; height: 5px;" title="床头柜"></div>
+                            <div class="character-icon bg-yellow-500" style="top: 25px; left: 10px;" data-character="4" title="赵静"></div>
+                        </div>
+                        
+                        <!-- 卫生间 -->
+                        <div class="room" style="top: 120px; left: 110px; width: 30px; height: 30px;" title="卫生间">
+                            <div class="appliance" style="top: 5px; left: 5px; width: 10px; height: 10px;" title="洗手台"></div>
+                            <div class="appliance" style="top: 20px; left: 5px; width: 10px; height: 10px;" title="马桶"></div>
+                            <div class="appliance" style="top: 20px; left: 20px; width: 5px; height: 10px;" title="淋浴"></div>
+                            <div class="character-icon bg-purple-500" style="top: 15px; left: 15px;" data-character="5" title="刘强"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 人物列表 -->
+                <div class="pixel-border p-4 bg-gray-900">
+                    <h2 class="text-lg mb-2 text-center">公寓居民</h2>
+                    <div class="grid grid-cols-2 gap-2" id="characterList">
+                        <!-- 人物卡片将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 中间区域：命令行对话 -->
+            <div class="lg:col-span-1 pixel-border command-line h-[600px] flex flex-col">
+                <div class="p-4 flex-1 overflow-y-auto pixel-scrollbar" id="commandOutput">
+                    <div class="command-text mb-2"><span class="command-prompt">&gt;</span> 系统初始化中...</div>
+                    <div class="command-text mb-2"><span class="command-prompt">&gt;</span> 加载公寓数据...</div>
+                    <div class="command-text mb-2"><span class="command-prompt">&gt;</span> 生成5位居民...</div>
+                    <div class="command-text mb-2"><span class="command-prompt">&gt;</span> 欢迎来到像素公寓生活模拟器!</div>
+                    <div class="command-text mb-2"><span class="command-prompt">&gt;</span> 输入"help"获取命令列表</div>
+                </div>
+                <div class="p-4 border-t border-gray-700 flex items-center">
+                    <span class="command-prompt mr-2">&gt;</span>
+                    <input type="text" class="command-input" id="commandInput" placeholder="输入命令...">
+                    <span class="cursor-blink ml-1">_</span>
+                </div>
+            </div>
+            
+            <!-- 右侧区域：人物详情 -->
+            <div class="lg:col-span-1 pixel-border p-4 bg-gray-900 h-[600px] overflow-y-auto pixel-scrollbar" id="characterDetailsContainer">
+                <h2 class="text-lg mb-4 text-center">人物详情</h2>
+                <p class="text-center text-gray-500">点击左侧人物查看详情</p>
+                
+                <!-- 人物详情将通过JS动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 公寓居民数据
+        const characters = [
+            {
+                id: 1,
+                name: "李明",
+                age: 28,
+                gender: "男",
+                personality: "内向但友善，喜欢安静的环境",
+                skills: ["编程", "烹饪", "摄影"],
+                relationships: {
+                    "张伟": "室友，关系一般",
+                    "王芳": "暗恋对象",
+                    "赵静": "朋友",
+                    "刘强": "不太熟悉"
+                },
+                shortTermMemory: [
+                    "昨天在客厅看电视",
+                    "今天需要完成编程项目",
+                    "冰箱里的牛奶快喝完了"
+                ],
+                longTermMemory: [
+                    "大学计算机专业毕业",
+                    "两年前搬入这所公寓",
+                    "小时候养过一只猫"
+                ],
+                currentRoom: "客厅",
+                color: "red"
+            },
+            {
+                id: 2,
+                name: "张伟",
+                age: 30,
+                gender: "男",
+                personality: "外向开朗，喜欢社交",
+                skills: ["健身", "演讲", "修理家电"],
+                relationships: {
+                    "李明": "室友，关系一般",
+                    "王芳": "同事，关系不错",
+                    "赵静": "前女友，关系紧张",
+                    "刘强": "健身房伙伴"
+                },
+                shortTermMemory: [
+                    "正在厨房准备晚餐",
+                    "今天要和刘强去健身房",
+                    "需要买新的蛋白粉"
+                ],
+                longTermMemory: [
+                    "曾经是大学篮球队队长",
+                    "一年前和赵静分手",
+                    "小时候住过三个不同的城市"
+                ],
+                currentRoom: "厨房",
+                color: "blue"
+            },
+            {
+                id: 3,
+                name: "王芳",
+                age: 26,
+                gender: "女",
+                personality: "聪明独立，事业心强",
+                skills: ["数据分析", "钢琴", "多国语言"],
+                relationships: {
+                    "李明": "知道他对自己的好感",
+                    "张伟": "同事，关系不错",
+                    "赵静": "闺蜜",
+                    "刘强": "不太熟悉"
+                },
+                shortTermMemory: [
+                    "在卧室整理明天会议的资料",
+                    "需要准备报告",
+                    "昨天在客厅遇到了李明"
+                ],
+                longTermMemory: [
+                    "硕士毕业于国外名校",
+                    "从小学习钢琴",
+                    "害怕蜘蛛"
+                ],
+                currentRoom: "卧室1",
+                color: "green"
+            },
+            {
+                id: 4,
+                name: "赵静",
+                age: 27,
+                gender: "女",
+                personality: "敏感细腻，艺术气质",
+                skills: ["绘画", "写作", "插花"],
+                relationships: {
+                    "李明": "朋友",
+                    "张伟": "前男友，关系紧张",
+                    "王芳": "闺蜜",
+                    "刘强": "新认识的朋友"
+                },
+                shortTermMemory: [
+                    "在卧室创作新的小说",
+                    "昨天和刘强聊得很愉快",
+                    "需要买新的画具"
+                ],
+                longTermMemory: [
+                    "出版过一本诗集",
+                    "和张伟有过一年的恋情",
+                    "对花生过敏"
+                ],
+                currentRoom: "卧室2",
+                color: "yellow"
+            },
+            {
+                id: 5,
+                name: "刘强",
+                age: 29,
+                gender: "男",
+                personality: "随和幽默，喜欢帮助别人",
+                skills: ["急救", "驾驶", "木工"],
+                relationships: {
+                    "李明": "不太熟悉",
+                    "张伟": "健身房伙伴",
+                    "王芳": "不太熟悉",
+                    "赵静": "新认识的朋友"
+                },
+                shortTermMemory: [
+                    "正在卫生间洗漱",
+                    "今天要和张伟去健身房",
+                    "答应帮赵静修书架"
+                ],
+                longTermMemory: [
+                    "曾经是急救员",
+                    "独自骑行穿越过西藏",
+                    "小时候从树上摔下来骨折过"
+                ],
+                currentRoom: "卫生间",
+                color: "purple"
+            }
+        ];
+
+        // 初始化人物列表
+        function initCharacterList() {
+            const characterList = document.getElementById('characterList');
+            characterList.innerHTML = '';
+            
+            characters.forEach(character => {
+                const card = document.createElement('div');
+                card.className = `character-card p-2 rounded bg-gray-800 border-l-4 border-${character.color}-500`;
+                card.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-${character.color}-500 mr-2"></div>
+                        <div>
+                            <h3 class="text-sm">${character.name}</h3>
+                            <p class="text-xs text-gray-400">${character.currentRoom}</p>
+                        </div>
+                    </div>
+                `;
+                card.dataset.characterId = character.id;
+                card.addEventListener('click', () => showCharacterDetails(character.id));
+                characterList.appendChild(card);
+            });
+        }
+
+        // 显示人物详情
+        function showCharacterDetails(characterId) {
+            const character = characters.find(c => c.id === characterId);
+            if (!character) return;
+            
+            const container = document.getElementById('characterDetailsContainer');
+            container.innerHTML = `
+                <h2 class="text-lg mb-4 text-center">${character.name}的详情</h2>
+                <div class="mb-4 flex justify-center">
+                    <div class="w-16 h-16 rounded-full bg-${character.color}-500 flex items-center justify-center text-2xl">
+                        ${character.name.charAt(0)}
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">基本信息</h3>
+                    <p>年龄: ${character.age}岁</p>
+                    <p>性别: ${character.gender}</p>
+                    <p>当前位置: ${character.currentRoom}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">性格</h3>
+                    <p>${character.personality}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">技能</h3>
+                    <ul class="list-disc list-inside">
+                        ${character.skills.map(skill => `<li>${skill}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">人际关系</h3>
+                    <ul class="list-disc list-inside">
+                        ${Object.entries(character.relationships).map(([name, relation]) => 
+                            `<li>${name}: ${relation}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">短期记忆</h3>
+                    <ul class="list-disc list-inside">
+                        ${character.shortTermMemory.map(memory => `<li>${memory}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-sm text-gray-400 mb-1">长期记忆</h3>
+                    <ul class="list-disc list-inside">
+                        ${character.longTermMemory.map(memory => `<li>${memory}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            // 添加到命令行输出
+            addCommandOutput(`查看人物: ${character.name}的详细信息`);
+        }
+
+        // 添加命令行输出
+        function addCommandOutput(text) {
+            const output = document.getElementById('commandOutput');
+            const line = document.createElement('div');
+            line.className = 'command-text mb-2';
+            line.innerHTML = `<span class="command-prompt">&gt;</span> ${text}`;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // 处理命令输入
+        function handleCommandInput() {
+            const input = document.getElementById('commandInput');
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const command = input.value.trim();
+                    if (command) {
+                        processCommand(command);
+                        input.value = '';
+                    }
+                }
+            });
+        }
+
+        // 处理命令
+        function processCommand(command) {
+            addCommandOutput(command);
+            
+            switch (command.toLowerCase()) {
+                case 'help':
+                    addCommandOutput('可用命令:');
+                    addCommandOutput('help - 显示帮助信息');
+                    addCommandOutput('list - 列出所有居民');
+                    addCommandOutput('view [名字] - 查看居民详情');
+                    addCommandOutput('move [名字] [房间] - 移动居民到不同房间');
+                    addCommandOutput('interact [名字1] [名字2] - 让两个居民互动');
+                    addCommandOutput('map - 显示公寓地图说明');
+                    addCommandOutput('clear - 清除命令行输出');
+                    break;
+                    
+                case 'list':
+                    addCommandOutput('公寓居民列表:');
+                    characters.forEach(char => {
+                        addCommandOutput(`${char.name} (${char.age}岁, ${char.gender}, 在${char.currentRoom})`);
+                    });
+                    break;
+                    
+                case 'clear':
+                    document.getElementById('commandOutput').innerHTML = '';
+                    break;
+                    
+                case 'map':
+                    addCommandOutput('公寓地图说明:');
+                    addCommandOutput('庭院 - 公寓前的绿化区域');
+                    addCommandOutput('玄关 - 入口处，有鞋柜');
+                    addCommandOutput('客厅 - 有沙发、电视和茶几');
+                    addCommandOutput('厨房 - 有冰箱和炉灶');
+                    addCommandOutput('餐厅 - 用餐区域');
+                    addCommandOutput('卧室1 - 王芳的房间');
+                    addCommandOutput('卧室2 - 赵静的房间');
+                    addCommandOutput('卫生间 - 有洗手台、马桶和淋浴');
+                    break;
+                    
+                default:
+                    if (command.startsWith('view ')) {
+                        const name = command.substring(5).trim();
+                        const character = characters.find(c => c.name === name);
+                        if (character) {
+                            showCharacterDetails(character.id);
+                        } else {
+                            addCommandOutput(`错误: 找不到名为"${name}"的居民`);
+                        }
+                    } else if (command.startsWith('move ')) {
+                        const parts = command.substring(5).split(' ');
+                        if (parts.length >= 2) {
+                            const name = parts[0];
+                            const room = parts.slice(1).join(' ');
+                            const validRooms = ["庭院", "玄关", "客厅", "厨房", "餐厅", "卧室1", "卧室2", "卫生间", "走廊"];
+                            
+                            if (!validRooms.includes(room)) {
+                                addCommandOutput(`错误: "${room}"不是有效的房间名称`);
+                                addCommandOutput('有效房间: ' + validRooms.join(', '));
+                                return;
+                            }
+                            
+                            const character = characters.find(c => c.name === name);
+                            if (character) {
+                                character.currentRoom = room;
+                                initCharacterList();
+                                
+                                // 更新地图上的位置
+                                updateCharacterPosition(character.id, room);
+                                addCommandOutput(`已将${name}移动到${room}`);
+                            } else {
+                                addCommandOutput(`错误: 找不到名为"${name}"的居民`);
+                            }
+                        } else {
+                            addCommandOutput('用法: move [名字] [房间]');
+                        }
+                    } else if (command.startsWith('interact ')) {
+                        const names = command.substring(9).split(' ');
+                        if (names.length >= 2) {
+                            const name1 = names[0];
+                            const name2 = names[1];
+                            const char1 = characters.find(c => c.name === name1);
+                            const char2 = characters.find(c => c.name === name2);
+                            
+                            if (char1 && char2) {
+                                const relation = char1.relationships[char2.name] || "没有特别关系";
+                                addCommandOutput(`${name1}和${name2}开始互动...`);
+                                addCommandOutput(`关系状态: ${relation}`);
+                                
+                                // 检查是否在同一房间
+                                if (char1.currentRoom !== char2.currentRoom) {
+                                    addCommandOutput(`互动失败: ${name1}在${char1.currentRoom}, ${name2}在${char2.currentRoom}`);
+                                    return;
+                                }
+                                
+                                // 根据房间类型生成不同的互动
+                                const roomInteractions = {
+                                    "庭院": [
+                                        "一起在庭院散步",
+                                        "坐在长椅上聊天",
+                                        "给植物浇水"
+                                    ],
+                                    "客厅": [
+                                        "一起看电视",
+                                        "坐在沙发上聊天",
+                                        "讨论最近的新闻"
+                                    ],
+                                    "厨房": [
+                                        "一起准备晚餐",
+                                        "讨论烹饪技巧",
+                                        "分享食谱"
+                                    ],
+                                    "餐厅": [
+                                        "一起用餐",
+                                        "讨论食物味道",
+                                        "分享旅行经历"
+                                    ],
+                                    "卧室1": [
+                                        "讨论工作上的事情",
+                                        "听音乐放松",
+                                        "分享个人经历"
+                                    ],
+                                    "卧室2": [
+                                        "讨论艺术创作",
+                                        "一起看书",
+                                        "分享写作心得"
+                                    ],
+                                    "卫生间": [
+                                        "尴尬地等待对方用完卫生间",
+                                        "讨论洗漱用品",
+                                        "不小心撞见对方"
+                                    ]
+                                };
+                                
+                                const interactions = roomInteractions[char1.currentRoom] || ["进行了普通的交流"];
+                                const randomInteraction = interactions[Math.floor(Math.random() * interactions.length)];
+                                addCommandOutput(`在${char1.currentRoom}: ${randomInteraction}`);
+                                
+                                // 有几率更新关系
+                                if (Math.random() > 0.7) {
+                                    const relationshipChanges = [
+                                        "关系变得更好了",
+                                        "产生了一点小摩擦",
+                                        "发现了共同爱好",
+                                        "对彼此有了新的认识"
+                                    ];
+                                    const change = relationshipChanges[Math.floor(Math.random() * relationshipChanges.length)];
+                                    addCommandOutput(`关系变化: ${change}`);
+                                }
+                            } else {
+                                addCommandOutput(`错误: 找不到指定的居民`);
+                            }
+                        } else {
+                            addCommandOutput('用法: interact [名字1] [名字2]');
+                        }
+                    } else {
+                        addCommandOutput(`错误: 未知命令"${command}"，输入"help"获取帮助`);
+                    }
+            }
+        }
+
+        // 更新角色在地图上的位置
+        function updateCharacterPosition(characterId, room) {
+            const character = characters.find(c => c.id === characterId);
+            if (!character) return;
+            
+            const icon = document.querySelector(`.character-icon[data-character="${characterId}"]`);
+            if (!icon) return;
+            
+            // 移除旧位置
+            const oldParent = icon.parentElement;
+            if (oldParent) {
+                oldParent.removeChild(icon);
+            }
+            
+            // 添加到新房间
+            let newParent;
+            const roomPositions = {
+                "庭院": { parent: "apartmentMap", x: 30, y: 30 },
+                "玄关": { parent: "apartmentMap", x: 70, y: 90 },
+                "客厅": { parent: "apartmentMap", x: 40, y: 45 },
+                "厨房": { parent: "apartmentMap", x: 100, y: 40 },
+                "餐厅": { parent: "apartmentMap", x: 90, y: 70 },
+                "卧室1": { parent: "apartmentMap", x: 30, y: 105 },
+                "卧室2": { parent: "apartmentMap", x: 70, y: 105 },
+                "卫生间": { parent: "apartmentMap", x: 120, y: 130 },
+                "走廊": { parent: "apartmentMap", x: 105, y: 100 }
+            };
+            
+            const position = roomPositions[room];
+            if (position) {
+                newParent = position.parent === "apartmentMap" ? 
+                    document.getElementById("apartmentMap") : 
+                    document.querySelector(`.room[title="${room}"]`);
+                
+                if (newParent) {
+                    icon.style.top = `${position.y}px`;
+                    icon.style.left = `${position.x}px`;
+                    newParent.appendChild(icon);
+                }
+            }
+        }
+
+        // 初始化地图点击事件
+        function initMapClickEvents() {
+            const characterIcons = document.querySelectorAll('.character-icon');
+            characterIcons.forEach(icon => {
+                icon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const characterId = icon.dataset.character;
+                    showCharacterDetails(parseInt(characterId));
+                });
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharacterList();
+            handleCommandInput();
+            initMapClickEvents();
+            
+            // 初始化角色位置
+            characters.forEach(character => {
+                updateCharacterPosition(character.id, character.currentRoom);
+            });
+            
+            // 添加欢迎消息
+            setTimeout(() => {
+                addCommandOutput('系统初始化完成!');
+                addCommandOutput('输入"help"查看可用命令');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
